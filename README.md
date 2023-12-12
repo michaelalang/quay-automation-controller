@@ -121,7 +121,7 @@ Those two configurations ensure that you will have a full empowered superuser at
       configBundleSecret: config-bundle-secret
     ```
 
-The Quay Operator will deploy a Quay Registry according to your configuration and the automation controller will `bootstrap` the initial Superuser as soon as the Quay API reports healthy. The generated Superuser token will be available as encrypted secret. (see [how to decrypt](README.md#how_to_decrypt))
+The Quay Operator will deploy a Quay Registry according to your configuration and the automation controller will `bootstrap` the initial Superuser as soon as the Quay API reports healthy. The generated Superuser token will be available as encrypted secret. (see [how to decrypt](README.md#how-to-decrypt))
 
     ```
     oc -n quay extract secret/superusertoken --to=-
@@ -186,26 +186,26 @@ Furthermore, the configmaps can be explicitly be **ignored** by removing the ann
 
 the Organizations are grouping various items together. The only mandatory one is `name` all other items will not be executed if not present.
 
-	```
-	{"name": "organizationname"}
-	```
+    ```
+    {"name": "organizationname"}
+    ```
 
 the Syntax needs to follows Docker API v2 declaration (Quay inherited) and reads as follows:
 	
-	```
-	name must be at least one lowercase, alpha-numeric characters, optionally separated by periods, dashes or underscores. More strictly, it must match the regular expression [a-z0-9]+(?:[._-][a-z0-9]+)*
-	```
+    ```
+    name must be at least one lowercase, alpha-numeric characters, optionally separated by periods, dashes or underscores. More strictly, it must match the regular expression [a-z0-9]+(?:[._-][a-z0-9]+)*
+    ```
 
 #### repositories
 
 the Repositories holds the various image/tags. Right now, creating tags as an automated bootstrap process is out of scope and there for only Repositories can be created.
 
-	```
-	{"name": "repository",
-	 "is_public": true|false,
-	 "state": "NORMAL|MIRROR|READ_ONLY"
-	}
-	```
+    ```
+    {"name": "repository",
+     "is_public": true|false,
+     "state": "NORMAL|MIRROR|READ_ONLY"
+    }
+    ```
 
 other type than `kind=IMAGE` are not supported. Automatic `quota` assignment will be added in a later release of the automation-controller.
 
@@ -249,13 +249,13 @@ Mirror can be configured on a per repository level only. The configuration takes
 Robot accounts are used to delegate access to repositories or Quay functionality for automated processes (Build pipelines, Scanners, CI/CD,...)
 The definition covers the name and if provided the description which is optional.
 
-	```
-	{"name":"robot", 
-	 "description":"Robot for CI/CD"
-	}
-	```
+    ```
+    {"name":"robot", 
+     "description":"Robot for CI/CD"
+    }
+    ```
 
-**NOTE** The generated tokens are stored in the namespace configmap `generatedrobots` with data keys alligned to the Organization of the robot and json formatted list of `name: token` (see [how to decrypt](README.md#how_to_decrypt))
+**NOTE** The generated tokens are stored in the namespace configmap `generatedrobots` with data keys alligned to the Organization of the robot and json formatted list of `name: token` (see [how to decrypt](README.md#how-to-decrypt))
 
 #### user accounts 
 
@@ -273,23 +273,23 @@ Roles can be:
 
 **NOTE** Users need to exists in Quay before they can be assigned to a team (see [create an all-users team](README.md#create_all-users_team))
 
-	```
-	# LDAP synchronization
-	{"name": "team2",
-	 "role": "Member",
-	 "sync": "cn=organization1,ou=Groups"
-	}
-	
-	# User list 
-	{"name": "team1",
-	 "role": "write",
-	 "members": [
-	   "organization+publisher",
-	   "engineer1",
-	   "engineer2"
-	 ]
-	}
-	```
+    ```
+    # LDAP synchronization
+    {"name": "team2",
+     "role": "Member",
+     "sync": "cn=organization1,ou=Groups"
+    }
+
+    # User list 
+    {"name": "team1",
+     "role": "write",
+     "members": [
+        "organization+publisher",
+        "engineer1",
+        "engineer2"
+     ]
+    }
+    ```
 
 #### owners
 
@@ -297,8 +297,8 @@ Owner team is a special Team that is created by Quay for every repository. Right
 
     ```
     "owners": [
-       "admin1",
-       "admin2"
+      "admin1",
+      "admin2"
     ] 
     ```
 
