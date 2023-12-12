@@ -1,0 +1,29 @@
+apiVersion: v1
+data:
+  config.json: |
+    {
+      "organizations": [
+        {
+          "name": "automation",
+          "teams": [
+            {
+              "name": "allusers",
+              "role": "Member",
+              "sync": "cn=allusers,ou=Groups"
+            },
+            {
+              "name": "owners",
+              "role": "admin",
+              "sync": "cn=quay-superusers,ou=Groups"
+            }
+          ]
+        }
+      ]
+    }
+immutable: false
+kind: ConfigMap
+metadata:
+  annotations:
+    quay-automation: v1
+  name: quay-bootstrap-init
+  namespace: quay

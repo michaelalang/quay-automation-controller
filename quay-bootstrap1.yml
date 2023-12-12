@@ -1,0 +1,96 @@
+apiVersion: v1
+data:
+  config.json: |
+    {
+      "organizations": [
+        {
+          "name": "organization1",
+          "repositories": [
+            {
+              "name": "repository1",
+              "is_public": true
+            },
+            {
+              "name": "repository2",
+              "is_public": false
+            },
+            {
+              "name": "repository3",
+              "is_public": false
+            }
+          ],
+          "robots": [
+            {
+              "name": "robot1",
+              "description": "robot1"
+            },
+            {
+              "name": "robot2",
+              "description": "robot2"
+            }
+          ],
+          "teams": [
+            {
+              "name": "members",
+              "role": "Member",
+              "sync": "cn=organization1,ou=Groups"
+            }
+          ],
+          "owners": [
+            "milang"
+          ]
+        },
+        {
+          "name": "organization2",
+          "repositories": [
+            {
+              "name": "repository1",
+              "is_public": true
+            },
+            {
+              "name": "repository2",
+              "is_public": true
+            },
+            {
+              "name": "repository3",
+              "is_public": true
+            },
+            {
+              "name": "repository4",
+              "is_public": true
+            },
+            {
+              "name": "repository5",
+              "is_public": true
+            },
+            {
+              "name": "repository6",
+              "is_public": true
+            }
+          ],
+          "robots": [
+            {
+              "name": "robot1",
+              "description": "robot1"
+            }
+          ],
+          "teams": [
+            {
+              "name": "members",
+              "role": "Member",
+              "sync": "cn=organization2,ou=Groups"
+            }
+          ],
+          "owners": [
+            "milang"
+          ]
+        }
+      ]
+    }
+immutable: false
+kind: ConfigMap
+metadata:
+  name: quay-bootstrap1
+  namespace: quay
+  annotations:
+    quay-automation: v1

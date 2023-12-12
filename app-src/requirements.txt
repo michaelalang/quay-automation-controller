@@ -1,0 +1,4 @@
+openshift-client
+psycopg2
+cryptography
+requests

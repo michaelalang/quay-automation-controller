@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+
+import sys
+from reconciler import *
+api, config = fetch_quay_config()
+print(getCryptStore(config).decrypt(sys.argv[1]))
