@@ -35,7 +35,7 @@ spec:
       - env:
         - name: VERIFY_TLS
           value: "0"
-        image: quay.apps.example.com/quay/quay-automation:v0.1.1
+        image: quay.io/rhn_support_milang/quay-automation:v0.1.1
         imagePullPolicy: Always
         name: automation
         resources: {}

@@ -1,3 +1,4 @@
+
 # Quay Automation POC
 
 ## DISCLAIMER
@@ -61,8 +62,8 @@ For the automation controller there are only two mandatory items to be in that c
 
 Those two configurations ensure that you will have a full empowered superuser at the end.
 
+* config.yaml 
     ```
-    # config.yaml
     ...
     SUPERUSERS:
     - automation
@@ -70,7 +71,6 @@ Those two configurations ensure that you will have a full empowered superuser at
     FEATURE_SUPERUSERS_FULL_ACCESS: true
     ...
     ```
-
 * create your init config bundle 
    
     ```
@@ -121,7 +121,10 @@ Those two configurations ensure that you will have a full empowered superuser at
       configBundleSecret: config-bundle-secret
     ```
 
-The Quay Operator will deploy a Quay Registry according to your configuration and the automation controller will `bootstrap` the initial Superuser as soon as the Quay API reports healthy. The generated Superuser token will be available as encrypted secret. (see [how to decrypt](README.md#how-to-decrypt))
+The Quay Operator will deploy a Quay Registry according to your configuration and the automation controller will `bootstrap` the initial Superuser as soon as the Quay API reports healthy. 
+
+* The generated Superuser token will be available as encrypted secret. (see [how to decrypt](README.md#how_to_decrypt))
+
 
     ```
     oc -n quay extract secret/superusertoken --to=-
@@ -136,7 +139,7 @@ At this point, you can utilize any other automation tool (Ansible, ...) as well 
 The automation controller creates such items based on found configmaps which provide json style data at the key `config.json`. 
 As example we want to provide two organizations (organization1, organization2) and repositories (repository1...) with different access levels (public, private). Additionally we want Robots to be populated and Teams to be configure (LDAP sync).
 
-The syntax looks as follows and the complete example is found in the git repository
+* The syntax looks as follows and the complete example is found in the git repository
 
     ```
     {
@@ -184,34 +187,34 @@ Furthermore, the configmaps can be explicitly be **ignored** by removing the ann
 
 #### organizations
 
-the Organizations are grouping various items together. The only mandatory one is `name` all other items will not be executed if not present.
+* The Organizations are grouping various items together. The only mandatory one is `name` all other items will not be executed if not present.
 
-    ```
-    {"name": "organizationname"}
-    ```
+
+	```
+	{"name": "organizationname"}
+	```
 
 the Syntax needs to follows Docker API v2 declaration (Quay inherited) and reads as follows:
-	
-    ```
-    name must be at least one lowercase, alpha-numeric characters, optionally separated by periods, dashes or underscores. More strictly, it must match the regular expression [a-z0-9]+(?:[._-][a-z0-9]+)*
-    ```
+
+	name must be at least one lowercase, alpha-numeric characters, optionally separated by periods, dashes or underscores. More strictly, it must match the regular expression [a-z0-9]+(?:[._-][a-z0-9]+)*
+
 
 #### repositories
 
-the Repositories holds the various image/tags. Right now, creating tags as an automated bootstrap process is out of scope and there for only Repositories can be created.
+* The Repositories holds the various image/tags. Right now, creating tags as an automated bootstrap process is out of scope and there for only Repositories can be created.
 
-    ```
-    {"name": "repository",
-     "is_public": true|false,
-     "state": "NORMAL|MIRROR|READ_ONLY"
-    }
-    ```
+	```
+	{"name": "repository",
+	 "is_public": true|false,
+	 "state": "NORMAL|MIRROR|READ_ONLY"
+	}
+	```
 
 other type than `kind=IMAGE` are not supported. Automatic `quota` assignment will be added in a later release of the automation-controller.
 
 ##### proxycache
 
-Proxycache can be configured on a per organization level only. The configuration takes the API attributes and only expiration will be autofilled with 1 day, if omitted.
+* Proxycache can be configured on a per organization level only. The configuration takes the API attributes and only expiration will be autofilled with 1 day, if omitted.
 
     ```
     "proxycache": {
@@ -224,10 +227,9 @@ Proxycache can be configured on a per organization level only. The configuration
 
 ##### mirror 
 
-Mirror can be configured on a per repository level only. The configuration takes the API attributes and the attributes `sync_start_date` and `is_enabled` will be autofilled, if omitted.
+* Mirror can be configured on a per repository level only. The configuration takes the API attributes and the attributes `sync_start_date` and `is_enabled` will be autofilled, if omitted.
 
-**NOTE** `robot` is mandatory, `sync_start_date` follows the syntax `YYYY-mm-ddTHH:MM:SSZ`
-
+  
     ```
     "mirror": {
       "external_reference": "docker.io/library/alpine",
@@ -243,19 +245,20 @@ Mirror can be configured on a per repository level only. The configuration takes
       "is_enabled": true
     }
     ```
-
+ **NOTE** `robot` is mandatory, `sync_start_date` follows the syntax `YYYY-mm-ddTHH:MM:SSZ`
+ 
 #### robot accounts
 
-Robot accounts are used to delegate access to repositories or Quay functionality for automated processes (Build pipelines, Scanners, CI/CD,...)
+* Robot accounts are used to delegate access to repositories or Quay functionality for automated processes (Build pipelines, Scanners, CI/CD,...)
 The definition covers the name and if provided the description which is optional.
 
-    ```
-    {"name":"robot", 
-     "description":"Robot for CI/CD"
-    }
-    ```
+	```
+	{"name":"robot", 
+	 "description":"Robot for CI/CD"
+	}
+	```
 
-**NOTE** The generated tokens are stored in the namespace configmap `generatedrobots` with data keys alligned to the Organization of the robot and json formatted list of `name: token` (see [how to decrypt](README.md#how-to-decrypt))
+**NOTE** The generated tokens are stored in the namespace configmap `generatedrobots` with data keys alligned to the Organization of the robot and json formatted list of `name: token` (see [how to decrypt](README.md#how_to_decrypt))
 
 #### user accounts 
 
@@ -273,32 +276,33 @@ Roles can be:
 
 **NOTE** Users need to exists in Quay before they can be assigned to a team (see [create an all-users team](README.md#create_all-users_team))
 
-    ```
-    # LDAP synchronization
-    {"name": "team2",
-     "role": "Member",
-     "sync": "cn=organization1,ou=Groups"
-    }
-
-    # User list 
-    {"name": "team1",
-     "role": "write",
-     "members": [
-        "organization+publisher",
-        "engineer1",
-        "engineer2"
-     ]
-    }
-    ```
+* Team role definitions
+	```
+	# LDAP synchronization
+	{"name": "team2",
+	 "role": "Member",
+	 "sync": "cn=organization1,ou=Groups"
+	}
+	
+	# User list 
+	{"name": "team1",
+	 "role": "write",
+	 "members": [
+	   "organization+publisher",
+	   "engineer1",
+	   "engineer2"
+	 ]
+	}
+	```
 
 #### owners
 
-Owner team is a special Team that is created by Quay for every repository. Right now the automation-controller can only set owners for all repositories under the Organization to the same value.
+* Owner team is a special Team that is created by Quay for every repository. Right now the automation-controller can only set owners for all repositories under the Organization to the same value.
 
     ```
     "owners": [
-      "admin1",
-      "admin2"
+       "admin1",
+       "admin2"
     ] 
     ```
 
@@ -308,7 +312,7 @@ The Owner team does not support LDAP synchronization. Use an additional Team wit
 
 with the restriction in Quay to have Users know to the system prior Team or permission assignment, you should create a Team of all Quay login allowed users to automated further Team or permission  building. 
 
-With LDAP synchronization your entities can be easily match in the automation organization team called `allusers`
+* With LDAP synchronization your entities can be easily match in the automation organization team called `allusers`
 
     ```
     {
@@ -331,6 +335,7 @@ Since the team `allusers` does not have any repository permissions and role `Mem
 
 Even though robot tokens can be read through the API/UI storing them after creating seems useful. Bear in mind that there's no state synchronization between the automation-controller and Quay meaning changing the toke after creating it will not update the configmap in the namespace. The namespace configmap is used for easy documentation of the created entities.
 
+* decrypt configmap secrets
     ```
     oc -n quay get configmap generatedrobots -o yaml 
 
@@ -340,3 +345,26 @@ Even though robot tokens can be read through the API/UI storing them after creat
     ```
 
 Same applies for the superusertoken which is stored as secret named `superusertoken`
+
+## Build your own image
+
+The provided CR's reference the public available image I build for POC usage. If you want your own image you private registry to be used you can build the image as follows
+
+* podman build 
+    ```
+    # initial release, you might want to change the VERSION accordingly
+    export VERSION=v0.1.1 
+    podman build --no-cache --arch amd64 -f Dockerfile \
+      -t quay.io/rhn_support_milang/quay-automation:${VERSION} 
+    podman push quay.io/rhn_support_milang/quay-automation:${VERSION}
+    ```
+* update the deployment.yml file accordingly
+    ```
+    ...
+    spec:
+	  containers:
+	  - env:
+	    - name: VERIFY_TLS
+	      value: "0"
+	    image: quay.io/rhn_support_milang/quay-automation:v0.1.1
+    ```
