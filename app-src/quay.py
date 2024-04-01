@@ -1,17 +1,18 @@
 #!/usr/bin/python3 -W ignore
 
-import requests
+import base64
+import hashlib
+import logging
 import os
 import sys
-import logging
 from concurrent.futures import ThreadPoolExecutor, wait
-from urllib3.util import parse_url
 from copy import deepcopy
 from datetime import datetime
 from uuid import uuid4
-import hashlib
-import base64
-from cryptography.fernet import Fernet, MultiFernet, InvalidToken
+
+import requests
+from cryptography.fernet import Fernet, InvalidToken, MultiFernet
+from urllib3.util import parse_url
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 MAXTHREADS = int(os.environ.get("MAXTHREAD", 3))
@@ -195,7 +196,9 @@ class Registry(object):
 
     def __get_robots(self, user):
         try:
-            rsp = self.__get(path=f"organization/{user.name}/robots?token=true")
+            rsp = self.__get(
+                path=f"organization/{user.name}/robots?token=true&permissions=true"
+            )
             logging.debug(f"Robots: {rsp}")
             user._robots = list(map(lambda x: Robot(from_json=x), rsp.get("robots")))
             user.parent = user
@@ -209,12 +212,14 @@ class Registry(object):
             for team in orga._json.get("ordered_teams", []):
                 rsp = self.__get(path=f"organization/{orga.name}/team/{team}/members")
                 logging.debug(f"Team: {rsp}")
-                if orga.get(team=rsp.get('name')) == None:
-                    orga._teams.append(OrganizationTeam(from_json=rsp, organization=orga))
+                if orga.get(team=rsp.get("name")) == None:
+                    orga._teams.append(
+                        OrganizationTeam(from_json=rsp, organization=orga)
+                    )
                 else:
-                    for m in rsp.get('members'):
-                        t = orga.get(team=rsp.get('name'))
-                        t.members.add(m.get('name'))
+                    for m in rsp.get("members"):
+                        t = orga.get(team=rsp.get("name"))
+                        t.members.add(m.get("name"))
         except Exception as e:
             logging.error(f"Generic getteam fetch error {e}")
             return False
@@ -754,8 +759,13 @@ class OrganizationTeam(object):
             return True
         elif self._json.get("sync", False) != False:
             return False
-        if all([self.members != [], rsp.get("members", []) == [],
-                rsp.get('status', 0) != 404]):
+        if all(
+            [
+                self.members != [],
+                rsp.get("members", []) == [],
+                rsp.get("status", 0) != 404,
+            ]
+        ):
             return True
         if rsp.get("status", 0) >= 400:
             return False
@@ -1019,7 +1029,11 @@ class Robot(object):
 
     @property
     def token(self):
-        return int(self._json.get("token"))
+        return self._json.get("token")
+
+    @property
+    def permissions(self):
+        return self._json.get("repositories", [])
 
     @property
     def description(self):
@@ -1126,7 +1140,7 @@ class Notification(object):
             path=f"repository/{self.parent.path}/notification/", data=self.to_dict
         )
         logging.debug(f"API create repository notification {rsp}")
-        return rsp.get('token')
+        return rsp.get("token")
 
     @property
     def delfromrepository(self):

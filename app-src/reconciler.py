@@ -1,22 +1,24 @@
 #!/usr/bin/env python
 
-from quay import *
-import openshift as oc
-import logging
-import sys
 import base64
-import yaml
-import json
-import psycopg2
-import bcrypt
-from uuid import uuid4
-import string
-from random import SystemRandom as Random
-from cryptography.hazmat.primitives.ciphers.aead import AESCCM
 import itertools
+import json
+import logging
 import os
-from time import sleep
+import string
+import sys
 from collections import defaultdict
+from random import SystemRandom as Random
+from time import sleep
+from uuid import uuid4
+
+import bcrypt
+import openshift as oc
+import psycopg2
+import yaml
+from cryptography.hazmat.primitives.ciphers.aead import AESCCM
+
+from quay import *
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logging.info("starting up")
@@ -194,98 +196,118 @@ def fetch_quay_token(config):
         logging.error(f"cannot fetch token from API {ocerr}")
         return False
 
+
 class CredentialStore(object):
     def __init__(self, config):
         self.config = config
-        self.users  = defaultdict(dict)
-        self._uup   = False
+        self.users = defaultdict(dict)
+        self._uup = False
         self.robots = defaultdict(dict)
-        self._rup   = False
+        self._rup = False
+
     @property
     def fetch_generated_creds(self):
         try:
-            robots = oc.selector('configmap/generatedrobots').objects()[0].model
+            robots = oc.selector("configmap/generatedrobots").objects()[0].model
             self.robots = dict(robots.data)
             for k in self.robots:
-                rdata = eval(self.robots[k].replace('\n', ','))
+                rdata = eval(self.robots[k].replace("\n", ","))
                 if isinstance(rdata, tuple):
                     rdata = rdata[0]
                 self.robots[k] = rdata
         except:
             self.robots = {}
         try:
-            users = oc.selector('configmap/generatedusers').objects()[0].model
+            users = oc.selector("configmap/generatedusers").objects()[0].model
             self.users = dict(users.data)
             for k in self.users:
-                rdata = eval(self.users[k].replace('\n', ','))
+                rdata = eval(self.users[k].replace("\n", ","))
                 if isinstance(rdata, tuple):
                     rdata = rdata[0]
                 self.users[k] = rdata
         except:
             self.users = {}
+
     def robot_ee(self, organization={}, name={}, data=None):
         if self.robots.get(organization, {}) == {}:
             self.robots[organization] = {name: self.__ee__(data)}
         else:
             self.robots[organization][name] = self.__ee__(data)
         self._rup = True
+
     def user_ee(self, organization=None, name=None, data=None):
         if self.users.get(organization, {}) == {}:
             self.users[organization] = {name: self.__ee__(data)}
         else:
             self.users[organization][name] = self.__ee__(data)
         self._uup = True
+
     def __ee__(self, data):
         try:
             store = getCryptStore(self.config)
-            return store.encrypt(data.encode("utf8")).decode('utf8')
+            return store.encrypt(data.encode("utf8")).decode("utf8")
         except Exception as eee:
             logging.error(f"cannot encode and encrypt data {data}")
-            return ''
+            return ""
+
     def apply(self, who=None, oc=None):
-        if oc == None:  raise ValueError('cannot apply without oc')
-        if who == 'users':
+        if oc == None:
+            raise ValueError("cannot apply without oc")
+        if who == "users":
             if self._uup:
                 return oc.apply(self.users_to_dict)
-        elif who == 'robots':
+        elif who == "robots":
             if self._rup:
                 return oc.apply(self.robots_to_dict)
         return False
+
     @property
     def users_to_dict(self):
         if self._uup:
-            data = self.__secret__('generatedusers')            
+            data = self.__secret__("generatedusers")
             for org in self.users:
                 rdata = []
                 for u in self.users[org]:
-                    rdata.append(str({u: json.dumps(self.robots[org][u])}).replace('"', ''))
-                data['data'][org] = '\n'.join(rdata)
+                    rdata.append(
+                        str({u: json.dumps(self.robots[org][u])}).replace('"', "")
+                    )
+                data["data"][org] = "\n".join(rdata)
             return data
-        return ''
+        return ""
+
     @property
     def robots_to_dict(self):
         if self._rup:
-            data = self.__secret__('generatedrobots')            
+            data = self.__secret__("generatedrobots")
             for org in self.robots:
                 rdata = []
                 for r in self.robots[org]:
-                    rdata.append(str({r: json.dumps(self.robots[org][r])}).replace('"', ''))
-                data['data'][org] = '\n'.join(rdata)
+                    rdata.append(
+                        str({r: json.dumps(self.robots[org][r])}).replace('"', "")
+                    )
+                data["data"][org] = "\n".join(rdata)
             return data
-        return ''
+        return ""
+
     def __secret__(self, name=None):
-        return {"apiVersion": "v1","data": {},
-                "kind": "ConfigMap", "metadata":
-                {"annotations": {"quay-automation-generated": "v1"},
-                "name": name}}
-    
+        return {
+            "apiVersion": "v1",
+            "data": {},
+            "kind": "ConfigMap",
+            "metadata": {
+                "annotations": {"quay-automation-generated": "v1"},
+                "name": name,
+            },
+        }
+
+
 def reconcile_loop():
     while True:
         try:
             api, config = fetch_quay_config()
             registry = Registry(
                 url=f"{config.get('PREFERRED_URL_SCHEME')}://{api}/api/v1/",
-                ca=bool(int(os.environ.get('VERIFY_TLS', True)))
+                ca=bool(int(os.environ.get("VERIFY_TLS", True))),
             )
             if not registry.health:
                 raise AttributeError()
@@ -327,11 +349,15 @@ def reconcile_loop():
                             roo = oo.get(robot=ro.name)
                             if roo == None:
                                 logging.info(f"creating Robot {ro.name}")
-                                credstore.robot_ee(o.name, ro.name, ro.addtoregistry.get('token'))
+                                credstore.robot_ee(
+                                    o.name, ro.name, ro.addtoregistry.get("token")
+                                )
                                 oo.robots.append(ro)
                         else:
                             logging.info(f"creating Robot {ro.name}")
-                            credstore.robot_ee(o.name, ro.name, ro.addtoregistry.get('token'))
+                            credstore.robot_ee(
+                                o.name, ro.name, ro.addtoregistry.get("token")
+                            )
                             oo.robots.append(ro)
                     for repo in org.get("repositories", []):
                         if repo.get("mirror", False):
@@ -374,7 +400,8 @@ def reconcile_loop():
                         for m in org.get("owners"):
                             oo = registry.get(organization=o.name)
                             try:
-                                if oo.get(team=t.name).has_member(m):    pass
+                                if oo.get(team=t.name).has_member(m):
+                                    pass
                                 else:
                                     t.members.add(m)
                             except AttributeError:
@@ -383,11 +410,11 @@ def reconcile_loop():
                         if len(t) > 0:
                             t.updatemembers
                 try:
-                    credstore.apply('users', oc)
+                    credstore.apply("users", oc)
                 except Exception as serr:
                     logging.error(f"cannot store generated users {serr}")
                 try:
-                    credstore.apply('robots', oc)
+                    credstore.apply("robots", oc)
                 except Exception as serr:
                     logging.error(f"cannot store generated robots {serr}")
 
