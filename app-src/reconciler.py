@@ -333,12 +333,16 @@ def reconcile_loop():
                     logging.error(
                         f"organization check -{o.name}- -{registry.get(organization=o.name)}-"
                     )
-                    if registry.get(organization=o.name) == None:
-                        if not org.get("proxycache", None) == None:
+                    if registry.get(organization=o.name) is None:
+                        if not org.get("proxycache", None) is None:
                             logging.info(f"setting proxycache for {o.name}")
                             o._proxycache = ProxyCacheConfig(
                                 from_json=org.get("proxycache"), parent=o
                             )
+                        for permission in org.get("default_permissions", []):
+                            logging.info(f"setting default permission for {o.name}")
+                            o._default_permissions.append(DefaultPermissionConfig(from_json=permission, parent=o))
+
                         logging.info(f"creating Organization {o.name}")
                         o.addtoregistry
                         registry.add_orga(o)

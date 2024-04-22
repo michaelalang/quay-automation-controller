@@ -8,6 +8,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, wait
 from copy import deepcopy
 from datetime import datetime
+from typing import List
 from uuid import uuid4
 
 import requests
@@ -241,7 +242,7 @@ class Registry(object):
 
     def add_repo(self, repository, api=False):
         if all(
-            [not isinstance(repository, Repository), not isinstance(repository, dict)]
+                [not isinstance(repository, Repository), not isinstance(repository, dict)]
         ):
             raise ValueError(
                 f"need instance Repository or instance dict to add to Registry"
@@ -259,10 +260,10 @@ class Registry(object):
 
     def add_orga(self, organization, api=False):
         if all(
-            [
-                not isinstance(organization, Organization),
-                not isinstance(organization, dict),
-            ]
+                [
+                    not isinstance(organization, Organization),
+                    not isinstance(organization, dict),
+                ]
         ):
             raise ValueError(
                 f"need instance Organization or instance dict to add to Registry"
@@ -280,10 +281,10 @@ class Registry(object):
 
     def takeownership(self, organization):
         if all(
-            [
-                not isinstance(organization, Organization),
-                not isinstance(organization, dict),
-            ]
+                [
+                    not isinstance(organization, Organization),
+                    not isinstance(organization, dict),
+                ]
         ):
             raise ValueError(
                 f"need instance Organization or instance dict to add to Registry"
@@ -326,12 +327,12 @@ class Registry(object):
                 with ThreadPoolExecutor(max_workers=MAXTHREADS) as tpe:
                     threads = []
                     for orga in set(
-                        map(
-                            lambda x: x.get("name"),
-                            self._Registry__get(path=f"superuser/organizations/").get(
-                                "organizations"
-                            ),
-                        )
+                            map(
+                                lambda x: x.get("name"),
+                                self._Registry__get(path=f"superuser/organizations/").get(
+                                    "organizations"
+                                ),
+                            )
                     ):
                         threads.append(tpe.submit(self.__get, f"organization/{orga}"))
                     wait(threads)
@@ -397,16 +398,16 @@ class Registry(object):
 
 class Repository(object):
     def __init__(
-        self,
-        namespace=None,
-        name=None,
-        is_public=False,
-        kind="image",
-        state="NORMAL",
-        quota_report=dict(quota_bytes=0, configured_quota=None),
-        is_starred=False,
-        from_json=None,
-        registry=None,
+            self,
+            namespace=None,
+            name=None,
+            is_public=False,
+            kind="image",
+            state="NORMAL",
+            quota_report=dict(quota_bytes=0, configured_quota=None),
+            is_starred=False,
+            from_json=None,
+            registry=None,
     ):
         self.registry = registry
         self.tags = []
@@ -538,13 +539,13 @@ class Repository(object):
 
 class Tag(object):
     def __init__(
-        self,
-        name=None,
-        size=0,
-        last_modified=None,
-        manifest_digest=None,
-        from_json=None,
-        parent=None,
+            self,
+            name=None,
+            size=0,
+            last_modified=None,
+            manifest_digest=None,
+            from_json=None,
+            parent=None,
     ):
         self._json = dict(
             name=name,
@@ -597,6 +598,7 @@ class Organization(object):
         self._json = dict(name=name)
         self.registry = registry
         self._proxycache = None
+        self._default_permissions: List[DefaultPermissionConfig] = []
         self._robots = []
         self._teams = []
         self._owners = []
@@ -624,8 +626,20 @@ class Organization(object):
     @property
     def is_proxy(self):
         if all(
-            [self._proxycache != None, isinstance(self._proxycache, ProxyCacheConfig)]
+                [self._proxycache != None, isinstance(self._proxycache, ProxyCacheConfig)]
         ):
+            return True
+        return False
+
+    @property
+    def has_default_permissions(self):
+        if all(
+                [self._default_permissions is not None, len(self._default_permissions) > 0]
+        ):
+            for permission in self._default_permissions:
+                if not isinstance(permission, DefaultPermissionConfig):
+                    logging.error("default permission config %s is invalid" % permission)
+                    return False
             return True
         return False
 
@@ -647,6 +661,20 @@ class Organization(object):
             return False
         return True
 
+    def __get_missing_default_permissions(self):
+        rsp = self.registry._Registry__get(path=f"organization/{self.name}/prototypes")
+        if len(rsp) == 0:
+            return []
+        else:
+            missing_permissions = []
+            for wanted_permission in self._default_permissions:
+                for existing_permission in rsp:
+                    if not (wanted_permission.delegate_name == existing_permission["delegate"]["name"] and \
+                            wanted_permission.delegate_kind == existing_permission["delegate"]["kind"] and \
+                            wanted_permission.role == existing_permission["role"]):
+                        missing_permissions.append(wanted_permission)
+            return missing_permissions
+
     @property
     def addtoregistry(self):
         if self.__exists__():
@@ -660,6 +688,17 @@ class Organization(object):
                 path=f"organization/{self.name}/proxycache", data=self.proxy.to_dict
             )
             logging.debug(f"API create proxy cache {rsp}")
+
+        if self.has_default_permissions:
+            missing_permissions = self.__get_missing_default_permissions()
+            if len(missing_permissions) > 0:
+                for wanted_permission in missing_permissions:
+                    rsp = self.registry._Registry__post(
+                        path=f"organization/{self.name}/prototypes", data=wanted_permission.to_dict
+                    )
+                    logging.debug(
+                        f"Default Permission of {wanted_permission.role}for {wanted_permission.delegate_kind} "
+                        f"{wanted_permission.delegate_name} created: {rsp}")
 
     @property
     def proxy(self):
@@ -728,7 +767,7 @@ class Organization(object):
 
 class OrganizationTeam(object):
     def __init__(
-        self, name=None, role="Member", members=[], from_json=None, organization=None
+            self, name=None, role="Member", members=[], from_json=None, organization=None
     ):
         self._json = dict(name=name)
         self.organization = organization
@@ -760,11 +799,11 @@ class OrganizationTeam(object):
         elif self._json.get("sync", False) != False:
             return False
         if all(
-            [
-                self.members != [],
-                rsp.get("members", []) == [],
-                rsp.get("status", 0) != 404,
-            ]
+                [
+                    self.members != [],
+                    rsp.get("members", []) == [],
+                    rsp.get("status", 0) != 404,
+                ]
         ):
             return True
         if rsp.get("status", 0) >= 400:
@@ -913,6 +952,51 @@ class ProxyCacheConfig(object):
                 org_name=self.parent.name,
             )
         return ret
+
+
+class DefaultPermissionConfig(object):
+    def __init__(self, from_json=None, parent=None):
+        self._json = dict()
+        self.parent = parent
+        self._role = "read"
+        self._activating_user = None
+        self._delegate_name = None
+        self._delegate_kind = None
+        if from_json is not None:
+            self.__from_json__(from_json)
+
+    def __from_json__(self, from_json):
+        for key, value in from_json.items():
+            self._json[key] = value
+
+    @property
+    def role(self):
+        return int(self._json.get("role", "read"))
+
+    @property
+    def activating_user(self):
+        return self._json.get("activating_user", None)
+
+    @property
+    def delegate_name(self):
+        return self._json.get("delegate_name")
+
+    @property
+    def delegate_kind(self):
+        return self._json.get("delegate_kind")
+
+    @property
+    def to_dict(self):
+        return {
+            "role": self._role,
+            "activating_user": {
+                "name": self.activating_user
+            },
+            "delegate": {
+                "name": self.delegate_name,
+                "kind": self.delegate_kind
+            }
+        }
 
 
 class MirrorConfig(object):
@@ -1105,14 +1189,14 @@ class NotificationSeverity(object):
 
 class Notification(object):
     def __init__(
-        self,
-        from_json=None,
-        parent=None,
-        title=None,
-        event=None,
-        method=None,
-        config=dict(),
-        event_config=dict(),
+            self,
+            from_json=None,
+            parent=None,
+            title=None,
+            event=None,
+            method=None,
+            config=dict(),
+            event_config=dict(),
     ):
         self._json = dict()
         self.parent = parent
