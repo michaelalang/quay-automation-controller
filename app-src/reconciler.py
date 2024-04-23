@@ -1,19 +1,17 @@
 #!/usr/bin/env python
+import logging
+import os.path
 
-import base64
 import itertools
 import json
-import logging
-import os
+import requests
 import string
-import sys
 from collections import defaultdict
 from random import SystemRandom as Random
 from time import sleep
-from uuid import uuid4
 
 import bcrypt
-import openshift as oc
+import openshift_client as oc
 import psycopg2
 import yaml
 from cryptography.hazmat.primitives.ciphers.aead import AESCCM
@@ -119,7 +117,7 @@ def initialize_superuser(config):
     return token
 
 
-def fetch_quay_config():
+def fetch_quay_config(overwrite_api: str = None):
     try:
         configbundles = list(
             filter(
@@ -140,7 +138,12 @@ def fetch_quay_config():
             reverse=True,
         )[0]
         config = yaml.safe_load(base64.b64decode(current.model.data.get("config.yaml")))
-        api = current.model.metadata.annotations.get("quay-registry-hostname")
+
+        if overwrite_api is not None:
+            api = overwrite_api
+        else:
+            api = current.model.metadata.annotations.get("quay-registry-hostname")
+
         logging.debug(f"Using API {api}")
         return (api, config)
     except Exception as ocerr:
@@ -301,10 +304,10 @@ class CredentialStore(object):
         }
 
 
-def reconcile_loop():
+def reconcile_loop(overwrite_api: str = None):
     while True:
         try:
-            api, config = fetch_quay_config()
+            api, config = fetch_quay_config(overwrite_api)
             registry = Registry(
                 url=f"{config.get('PREFERRED_URL_SCHEME')}://{api}/api/v1/",
                 ca=bool(int(os.environ.get("VERIFY_TLS", True))),
@@ -339,13 +342,16 @@ def reconcile_loop():
                             o._proxycache = ProxyCacheConfig(
                                 from_json=org.get("proxycache"), parent=o
                             )
-                        for permission in org.get("default_permissions", []):
-                            logging.info(f"setting default permission for {o.name}")
-                            o._default_permissions.append(DefaultPermissionConfig(from_json=permission, parent=o))
 
                         logging.info(f"creating Organization {o.name}")
                         o.addtoregistry
                         registry.add_orga(o)
+
+                    for permission in org.get("default_permissions", []):
+                        logging.info(f"setting default permission for {o.name}")
+                        o._default_permissions.add(DefaultPermissionConfig(from_json=permission, parent=o))
+                    o.add_permissions()
+
                     for robot in org.get("robots", []):
                         ro = Robot(from_json=robot, parent=o)
                         oo = registry.get(organization=o.name)
@@ -430,19 +436,25 @@ def reconcile_loop():
             sleep(60)
         except Exception as err:
             logging.error(f"unhandled exception {err}")
+            logging.exception(err)
             break
 
 
 if __name__ == "__main__":
-    oc.context.default_token = open(
-        "/run/secrets/kubernetes.io/serviceaccount/token"
-    ).read()
-    oc.set_default_project = open(
-        "/run/secrets/kubernetes.io/serviceaccount/namespace"
-    ).read()
-    oc.set_default_api_server("https://kubernetes.default.svc.cluster.local:443")
-    oc.context.default_skip_tls_verify = True
+    if os.path.exists("/run/secrets/kubernetes.io/serviceaccount/token"):
+        logging.info("Running inside K8s Cluster")
+        oc.context.default_token = open(
+            "/run/secrets/kubernetes.io/serviceaccount/token"
+        ).read()
+        oc.set_default_project = open(
+            "/run/secrets/kubernetes.io/serviceaccount/namespace"
+        ).read()
+        oc.set_default_api_server("https://kubernetes.default.svc.cluster.local:443")
+        oc.context.default_skip_tls_verify = True
+    else:
+        logging.info("Running outside of K8s Cluster")
+        oc.context.default_skip_tls_verify = True
     try:
-        reconcile_loop()
+        reconcile_loop(overwrite_api="registry.apps.arc-openshift-demo.resources.dev1.arc.airbus.local:8443")
     except KeyboardInterrupt:
         logging.info("exiting on request")

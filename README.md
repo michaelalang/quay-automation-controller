@@ -385,3 +385,8 @@ The provided CR's reference the public available image I build for POC usage. If
 	      value: "0"
 	    image: quay.io/rhn_support_milang/quay-automation:v0.1.1
     ```
+
+## Running local
+The automation assumes in runs in-cluster if the file `/run/secrets/kubernetes.io/serviceaccount/token` is present. 
+Otherwise, it will use your local oc binary and config to connect to the cluster. Make sure you have set up the correct default project for this to work.
+If needed the Quay API endpoint can be overwritten using `overwrite_api`.

@@ -8,7 +8,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, wait
 from copy import deepcopy
 from datetime import datetime
-from typing import List
+from typing import List, Set
 from uuid import uuid4
 
 import requests
@@ -598,7 +598,7 @@ class Organization(object):
         self._json = dict(name=name)
         self.registry = registry
         self._proxycache = None
-        self._default_permissions: List[DefaultPermissionConfig] = []
+        self._default_permissions: Set[DefaultPermissionConfig] = set()
         self._robots = []
         self._teams = []
         self._owners = []
@@ -663,17 +663,15 @@ class Organization(object):
 
     def __get_missing_default_permissions(self):
         rsp = self.registry._Registry__get(path=f"organization/{self.name}/prototypes")
-        if len(rsp) == 0:
-            return []
-        else:
-            missing_permissions = []
-            for wanted_permission in self._default_permissions:
-                for existing_permission in rsp:
-                    if not (wanted_permission.delegate_name == existing_permission["delegate"]["name"] and \
-                            wanted_permission.delegate_kind == existing_permission["delegate"]["kind"] and \
-                            wanted_permission.role == existing_permission["role"]):
-                        missing_permissions.append(wanted_permission)
-            return missing_permissions
+        missing_permissions = []
+        for wanted_permission in self._default_permissions:
+            for existing_permission in rsp['prototypes']:
+                if wanted_permission.delegate_name == existing_permission["delegate"]["name"] and \
+                        wanted_permission.delegate_kind == existing_permission["delegate"]["kind"] and \
+                        wanted_permission.role == existing_permission["role"]:
+                    break
+            missing_permissions.append(wanted_permission)
+        return missing_permissions
 
     @property
     def addtoregistry(self):
@@ -689,6 +687,7 @@ class Organization(object):
             )
             logging.debug(f"API create proxy cache {rsp}")
 
+    def add_permissions(self):
         if self.has_default_permissions:
             missing_permissions = self.__get_missing_default_permissions()
             if len(missing_permissions) > 0:
@@ -697,7 +696,7 @@ class Organization(object):
                         path=f"organization/{self.name}/prototypes", data=wanted_permission.to_dict
                     )
                     logging.debug(
-                        f"Default Permission of {wanted_permission.role}for {wanted_permission.delegate_kind} "
+                        f"Default Permission of {wanted_permission.role} for {wanted_permission.delegate_kind} "
                         f"{wanted_permission.delegate_name} created: {rsp}")
 
     @property
@@ -955,15 +954,20 @@ class ProxyCacheConfig(object):
 
 
 class DefaultPermissionConfig(object):
-    def __init__(self, from_json=None, parent=None):
+    def __init__(self, from_json, parent):
         self._json = dict()
         self.parent = parent
-        self._role = "read"
-        self._activating_user = None
-        self._delegate_name = None
-        self._delegate_kind = None
-        if from_json is not None:
-            self.__from_json__(from_json)
+        self.__from_json__(from_json)
+
+    def __eq__(self, other):
+        if isinstance(other, DefaultPermissionConfig):
+            return (self.delegate_name == other.delegate_name and self.delegate_kind == other.delegate_kind
+                    and self.role == other.role)
+        return False
+
+    def __hash__(self):
+        # Define a hash value based on the attributes that determine equality
+        return hash(f"{self.delegate_kind}-{self.delegate_name}-{self.role}")
 
     def __from_json__(self, from_json):
         for key, value in from_json.items():
@@ -971,11 +975,7 @@ class DefaultPermissionConfig(object):
 
     @property
     def role(self):
-        return int(self._json.get("role", "read"))
-
-    @property
-    def activating_user(self):
-        return self._json.get("activating_user", None)
+        return self._json.get("role", "read")
 
     @property
     def delegate_name(self):
@@ -988,10 +988,7 @@ class DefaultPermissionConfig(object):
     @property
     def to_dict(self):
         return {
-            "role": self._role,
-            "activating_user": {
-                "name": self.activating_user
-            },
+            "role": self.role,
             "delegate": {
                 "name": self.delegate_name,
                 "kind": self.delegate_kind
