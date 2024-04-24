@@ -451,10 +451,12 @@ if __name__ == "__main__":
         ).read()
         oc.set_default_api_server("https://kubernetes.default.svc.cluster.local:443")
         oc.context.default_skip_tls_verify = True
+        overwrite_api = None
     else:
         logging.info("Running outside of K8s Cluster")
         oc.context.default_skip_tls_verify = True
+        overwrite_api = None
     try:
-        reconcile_loop(overwrite_api="registry.apps.arc-openshift-demo.resources.dev1.arc.airbus.local:8443")
+        reconcile_loop(overwrite_api)
     except KeyboardInterrupt:
         logging.info("exiting on request")
