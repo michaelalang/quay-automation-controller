@@ -665,12 +665,15 @@ class Organization(object):
         rsp = self.registry._Registry__get(path=f"organization/{self.name}/prototypes")
         missing_permissions = []
         for wanted_permission in self._default_permissions:
+            exists = False
             for existing_permission in rsp['prototypes']:
                 if wanted_permission.delegate_name == existing_permission["delegate"]["name"] and \
                         wanted_permission.delegate_kind == existing_permission["delegate"]["kind"] and \
                         wanted_permission.role == existing_permission["role"]:
+                    exists = True
                     break
-            missing_permissions.append(wanted_permission)
+            if not exists:
+                missing_permissions.append(wanted_permission)
         return missing_permissions
 
     @property
