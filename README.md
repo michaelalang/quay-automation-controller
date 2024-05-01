@@ -6,6 +6,8 @@
 the following procedure and tools are not supported by Red Hat and might violate the support statement for your Red Hat Quay deployment.
 Please consider raising and RFE with Red Hat if the tools and processes are useful to get a supported version in the future.
 
+[[TOC]]
+
 ## Pre requisits
 
 You'll need:
@@ -13,13 +15,13 @@ You'll need:
 * Red Hat Quay Operator installed
 * preferred a LDAP or OIDC infrastructure providing your userbase
 
-Users are preferable provided by a centralized infrastructure as eventhough credentials will be encrypted when stored, the automation is not ment to replace your infrastructure and security concepts those provide. Furthermore, bare in mind that even encrypted, both sensitive items (de/encryption key, encrypted content are stored in the same location)
+Users are preferably provided by a centralized infrastructure as even though credentials will be encrypted when stored, the automation is not ment to replace your infrastructure and security concepts those provide. Furthermore, bear in mind that even encrypted, both sensitive items (de/encryption key, encrypted content are stored in the same location)
 
 Further note, the `annotation` `quay-automation=v1` is used to `en-disable` configmaps in the automation-controller.
 
 ## Deploy the automation controller
 
-The automation controller reads and writes configmaps as well as secrets in the namespace. Therefor it's mandatory to have write privileges which we'll handle with the `edit` namespace rolebinding.
+The automation controller reads and writes configmaps as well as secrets in the namespace. Therefor it's mandatory to have written privileges which we'll handle with the `edit` namespace rolebinding.
 
 * create the ServiceAccount for the automation controller
 
@@ -123,7 +125,7 @@ Those two configurations ensure that you will have a full empowered superuser at
 
 The Quay Operator will deploy a Quay Registry according to your configuration and the automation controller will `bootstrap` the initial Superuser as soon as the Quay API reports healthy. 
 
-* The generated Superuser token will be available as encrypted secret. (see [how to decrypt](README.md#how_to_decrypt))
+* The generated Superuser token will be available as encrypted secret. (see [how to decrypt](#how-to-decrypt))
 
 
     ```
@@ -132,7 +134,7 @@ The Quay Operator will deploy a Quay Registry according to your configuration an
     gAAAAABleA8xhzgMVTNHIniKSta-AHOiF4UZl8bTANEniQY_4yhjZlf8ikOqBCDIApLbs_byYu9gmQzjnWyrP1c9rWpt1ScsReY675-ijazZaZ_Pr-a7X4XAvEBGzlITIQ7G1Pa9RoyY
     ```
 
-At this point, you can utilize any other automation tool (Ansible, ...) as well by transfering the superuser token into those systems for further actions.
+At this point, you can utilize any other automation tool (Ansible, ...) as well by transferring the superuser token into those systems for further actions.
 
 ## Create you first organizations, repositories and robot accounts
 
@@ -194,14 +196,14 @@ Furthermore, the configmaps can be explicitly be **ignored** by removing the ann
 	{"name": "organizationname"}
 	```
 
-the Syntax needs to follows Docker API v2 declaration (Quay inherited) and reads as follows:
+the Syntax needs to follow Docker API v2 declaration (Quay inherited) and reads as follows:
 
 	name must be at least one lowercase, alpha-numeric characters, optionally separated by periods, dashes or underscores. More strictly, it must match the regular expression [a-z0-9]+(?:[._-][a-z0-9]+)*
 
 
 #### repositories
 
-* The Repositories holds the various image/tags. Right now, creating tags as an automated bootstrap process is out of scope and there for only Repositories can be created.
+* The Repositories hold the various image/tags. Right now, creating tags as an automated bootstrap process is out of scope and therefore only Repositories can be created.
 
 	```
 	{"name": "repository",
@@ -258,7 +260,7 @@ The definition covers the name and if provided the description which is optional
 	}
 	```
 
-**NOTE** The generated tokens are stored in the namespace configmap `generatedrobots` with data keys alligned to the Organization of the robot and json formatted list of `name: token` (see [how to decrypt](README.md#how_to_decrypt))
+**NOTE** The generated tokens are stored in the namespace configmap `generatedrobots` with data keys aligned to the Organization of the robot and json formatted list of `name: token` (see [how to decrypt](README.md#how_to_decrypt))
 
 #### user accounts 
 
@@ -274,7 +276,7 @@ Roles can be:
 * write 
 * admin 
 
-**NOTE** Users need to exists in Quay before they can be assigned to a team (see [create an all-users team](README.md#create_all-users_team))
+**NOTE** Users need to exist in Quay before they can be assigned to a team (see [create an all-users team](README.md#create_all-users_team))
 
 * Team role definitions
 	```
@@ -308,6 +310,21 @@ Roles can be:
 
 The Owner team does not support LDAP synchronization. Use an additional Team with the appropriate permissions instead.
 
+### Default Permissions
+
+* Default Permissions of a given can be applied like so:
+* `role` can be `read`, `write` or `admin`
+* `delegate_kind` can be `team` or `user` 
+
+```
+  "default_permissions": [
+    {
+      "role": "read",
+      "delegate_name": "owners",
+      "delegate_kind": "team"
+    }
+  ]
+```
 ## create all-users team
 
 with the restriction in Quay to have Users know to the system prior Team or permission assignment, you should create a Team of all Quay login allowed users to automated further Team or permission  building. 
@@ -368,3 +385,8 @@ The provided CR's reference the public available image I build for POC usage. If
 	      value: "0"
 	    image: quay.io/rhn_support_milang/quay-automation:v0.1.1
     ```
+
+## Running local
+The automation assumes in runs in-cluster if the file `/run/secrets/kubernetes.io/serviceaccount/token` is present. 
+Otherwise, it will use your local oc binary and config to connect to the cluster. Make sure you have set up the correct default project for this to work.
+If needed the Quay API endpoint can be overwritten using `overwrite_api`.
